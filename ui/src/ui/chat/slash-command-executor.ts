@@ -46,6 +46,15 @@ export type SlashCommandResult = {
   };
 };
 
+type SessionsCompactRpcResult = {
+  ok: boolean;
+  key: string;
+  compacted?: boolean;
+  reason?: string;
+  kept?: number;
+  archived?: string;
+};
+
 export async function executeSlashCommand(
   client: GatewayBrowserClient,
   sessionKey: string,
@@ -65,8 +74,8 @@ export async function executeSlashCommand(
       return { content: "Chat history cleared.", action: "clear" };
     case "focus":
       return { content: "Toggled focus mode.", action: "toggle-focus" };
-    case "compact":
-      return await executeCompact(client, sessionKey);
+    case "compact-local":
+      return await executeCompactLocal(client, sessionKey, args);
     case "model":
       return await executeModel(client, sessionKey, args);
     case "think":
@@ -109,15 +118,45 @@ function executeHelp(): SlashCommandResult {
   return { content: lines.join("\n") };
 }
 
-async function executeCompact(
+async function executeCompactLocal(
   client: GatewayBrowserClient,
   sessionKey: string,
+  args: string,
 ): Promise<SlashCommandResult> {
+  const trimmedArgs = args.trim();
+  if (trimmedArgs) {
+    const parsed = Number(trimmedArgs);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return { content: "Usage: `/compact-local [max-lines]` with a positive integer." };
+    }
+  }
+  const maxLines = trimmedArgs ? Math.max(1, Math.floor(Number(trimmedArgs))) : undefined;
   try {
-    await client.request("sessions.compact", { key: sessionKey });
-    return { content: "Context compacted successfully.", action: "refresh" };
+    const result = await client.request<SessionsCompactRpcResult>("sessions.compact", {
+      key: sessionKey,
+      ...(maxLines ? { maxLines } : {}),
+    });
+    if (result.compacted) {
+      return {
+        content: `Transcript trimmed successfully to the last **${result.kept ?? maxLines ?? 400}** lines.`,
+        action: "refresh",
+      };
+    }
+    if (result.reason === "no sessionId") {
+      return { content: "Transcript trim unavailable for this session (missing session id)." };
+    }
+    if (result.reason === "no transcript") {
+      return { content: "Transcript trim unavailable because no transcript file was found." };
+    }
+    if (typeof result.kept === "number") {
+      const limit = maxLines ?? 400;
+      return {
+        content: `Transcript already fits within **${limit}** lines; kept **${result.kept}** lines.`,
+      };
+    }
+    return { content: "Transcript trim completed with no changes." };
   } catch (err) {
-    return { content: `Compaction failed: ${String(err)}` };
+    return { content: `Transcript trim failed: ${String(err)}` };
   }
 }
 

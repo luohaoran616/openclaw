@@ -39,4 +39,22 @@ describe("parseSlashCommand", () => {
       args: "",
     });
   });
+
+  it("keeps /compact on the agent path and preserves custom instructions", () => {
+    const compact = SLASH_COMMANDS.find((entry) => entry.name === "compact");
+    expect(compact?.executeLocal).not.toBe(true);
+    expect(parseSlashCommand("/compact Focus on decisions and open questions")).toMatchObject({
+      command: { name: "compact" },
+      args: "Focus on decisions and open questions",
+    });
+  });
+
+  it("keeps /compact-local on the local RPC path", () => {
+    const compactLocal = SLASH_COMMANDS.find((entry) => entry.name === "compact-local");
+    expect(compactLocal?.executeLocal).toBe(true);
+    expect(parseSlashCommand("/compact-local 250")).toMatchObject({
+      command: { name: "compact-local" },
+      args: "250",
+    });
+  });
 });

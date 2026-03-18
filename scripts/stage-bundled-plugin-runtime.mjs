@@ -7,13 +7,61 @@ function symlinkType() {
   return process.platform === "win32" ? "junction" : "dir";
 }
 
+function shouldFallbackCopy(error) {
+  return (
+    process.platform === "win32" &&
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "EPERM" || error.code === "EACCES" || error.code === "UNKNOWN")
+  );
+}
+
+function copyPath(sourcePath, targetPath) {
+  const stat = fs.statSync(sourcePath);
+  if (stat.isDirectory()) {
+    fs.cpSync(sourcePath, targetPath, { recursive: true, force: true });
+    return;
+  }
+  fs.copyFileSync(sourcePath, targetPath);
+}
+
 function relativeSymlinkTarget(sourcePath, targetPath) {
   const relativeTarget = path.relative(path.dirname(targetPath), sourcePath);
   return relativeTarget || ".";
 }
 
 function symlinkPath(sourcePath, targetPath, type) {
-  fs.symlinkSync(relativeSymlinkTarget(sourcePath, targetPath), targetPath, type);
+  try {
+    fs.symlinkSync(relativeSymlinkTarget(sourcePath, targetPath), targetPath, type);
+  } catch (error) {
+    if (!shouldFallbackCopy(error)) {
+      throw error;
+    }
+    copyPath(sourcePath, targetPath);
+  }
+}
+
+function linkExistingSymlink(sourcePath, targetPath) {
+  try {
+    fs.symlinkSync(fs.readlinkSync(sourcePath), targetPath);
+  } catch (error) {
+    if (!shouldFallbackCopy(error)) {
+      throw error;
+    }
+    copyPath(fs.realpathSync(sourcePath), targetPath);
+  }
+}
+
+function symlinkOrCopy(sourcePath, targetPath, type) {
+  try {
+    fs.symlinkSync(sourcePath, targetPath, type);
+  } catch (error) {
+    if (!shouldFallbackCopy(error)) {
+      throw error;
+    }
+    copyPath(sourcePath, targetPath);
+  }
 }
 
 function shouldWrapRuntimeJsFile(sourcePath) {
@@ -63,7 +111,7 @@ function stagePluginRuntimeOverlay(sourceDir, targetDir) {
     }
 
     if (dirent.isSymbolicLink()) {
-      fs.symlinkSync(fs.readlinkSync(sourcePath), targetPath);
+      linkExistingSymlink(sourcePath, targetPath);
       continue;
     }
 
@@ -94,7 +142,7 @@ function linkPluginNodeModules(params) {
   if (!fs.existsSync(params.sourcePluginNodeModulesDir)) {
     return;
   }
-  fs.symlinkSync(params.sourcePluginNodeModulesDir, runtimeNodeModulesDir, symlinkType());
+  symlinkOrCopy(params.sourcePluginNodeModulesDir, runtimeNodeModulesDir, symlinkType());
 
   // Runtime wrappers re-export from dist/extensions/<plugin>/index.js, so Node
   // resolves bare-specifier dependencies relative to the dist plugin directory.
@@ -105,7 +153,7 @@ function linkPluginNodeModules(params) {
 
   if (params.distPluginDir) {
     const distNodeModulesDir = path.join(params.distPluginDir, "node_modules");
-    fs.symlinkSync(params.sourcePluginNodeModulesDir, distNodeModulesDir, symlinkType());
+    symlinkOrCopy(params.sourcePluginNodeModulesDir, distNodeModulesDir, symlinkType());
   }
 }
 

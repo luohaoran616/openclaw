@@ -449,3 +449,85 @@ describe("executeSlashCommand directives", () => {
     });
   });
 });
+
+describe("executeSlashCommand /compact-local", () => {
+  it("trims transcript successfully with default max lines", async () => {
+    const request = vi.fn(async (method: string, payload?: unknown) => {
+      if (method === "sessions.compact") {
+        expect(payload).toEqual({ key: "agent:main:main" });
+        return { ok: true, key: "agent:main:main", compacted: true, kept: 400 };
+      }
+      throw new Error(`unexpected method: ${method}`);
+    });
+
+    const result = await executeSlashCommand(
+      { request } as unknown as GatewayBrowserClient,
+      "agent:main:main",
+      "compact-local",
+      "",
+    );
+
+    expect(result).toEqual({
+      content: "Transcript trimmed successfully to the last **400** lines.",
+      action: "refresh",
+    });
+  });
+
+  it("reports a no-op trim with the current kept line count", async () => {
+    const request = vi.fn(async (method: string, payload?: unknown) => {
+      if (method === "sessions.compact") {
+        expect(payload).toEqual({ key: "agent:main:main", maxLines: 250 });
+        return { ok: true, key: "agent:main:main", compacted: false, kept: 173 };
+      }
+      throw new Error(`unexpected method: ${method}`);
+    });
+
+    const result = await executeSlashCommand(
+      { request } as unknown as GatewayBrowserClient,
+      "agent:main:main",
+      "compact-local",
+      "250",
+    );
+
+    expect(result).toEqual({
+      content: "Transcript already fits within **250** lines; kept **173** lines.",
+    });
+  });
+
+  it("reports missing transcript reasons clearly", async () => {
+    const request = vi.fn(async (method: string, payload?: unknown) => {
+      if (method === "sessions.compact") {
+        expect(payload).toEqual({ key: "agent:main:main" });
+        return { ok: true, key: "agent:main:main", compacted: false, reason: "no transcript" };
+      }
+      throw new Error(`unexpected method: ${method}`);
+    });
+
+    const result = await executeSlashCommand(
+      { request } as unknown as GatewayBrowserClient,
+      "agent:main:main",
+      "compact-local",
+      "",
+    );
+
+    expect(result).toEqual({
+      content: "Transcript trim unavailable because no transcript file was found.",
+    });
+  });
+
+  it("rejects invalid max line arguments", async () => {
+    const request = vi.fn();
+
+    const result = await executeSlashCommand(
+      { request } as unknown as GatewayBrowserClient,
+      "agent:main:main",
+      "compact-local",
+      "abc",
+    );
+
+    expect(result).toEqual({
+      content: "Usage: `/compact-local [max-lines]` with a positive integer.",
+    });
+    expect(request).not.toHaveBeenCalled();
+  });
+});

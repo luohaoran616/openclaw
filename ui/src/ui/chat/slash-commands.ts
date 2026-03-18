@@ -34,8 +34,16 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   },
   {
     name: "compact",
-    description: "Compact session context",
+    description: "Compact session context with a summary",
+    args: "[instructions]",
     icon: "loader",
+    category: "session",
+  },
+  {
+    name: "compact-local",
+    description: "Trim local transcript history without summarizing",
+    args: "[max-lines]",
+    icon: "trash",
     category: "session",
     executeLocal: true,
   },
