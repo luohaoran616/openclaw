@@ -524,6 +524,7 @@ describe("sessions tools", () => {
     const details = result.details as { status?: string; error?: string };
     expect(details.status).toBe("error");
     expect(details.error).toMatch(/Session not found|No session found/);
+    expect(details.error).toContain("use memory_expand instead");
   });
 
   it("sessions_send supports fire-and-forget and wait", async () => {

@@ -25,7 +25,13 @@ import {
 } from "../secrets/provider-env-vars.js";
 import { DANGEROUS_ACP_TOOLS } from "../security/dangerous-tools.js";
 
-const SAFE_AUTO_APPROVE_TOOL_IDS = new Set(["read", "search", "web_search", "memory_search"]);
+const SAFE_AUTO_APPROVE_TOOL_IDS = new Set([
+  "read",
+  "search",
+  "web_search",
+  "memory_search",
+  "memory_expand",
+]);
 const TRUSTED_SAFE_TOOL_ALIASES = new Set(["search"]);
 const READ_TOOL_PATH_KEYS = ["path", "file_path", "filePath"];
 const TOOL_NAME_MAX_LENGTH = 128;
@@ -35,6 +41,7 @@ const TOOL_KIND_BY_ID = new Map<string, string>([
   ["search", "search"],
   ["web_search", "search"],
   ["memory_search", "search"],
+  ["memory_expand", "read"],
 ]);
 
 type PermissionOption = RequestPermissionRequest["options"][number];

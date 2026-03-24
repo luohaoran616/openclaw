@@ -46,6 +46,7 @@ function buildCommonSystemParams(workspaceDir: string) {
     "message",
     "memory_search",
     "memory_get",
+    "memory_expand",
     "web_search",
     "web_fetch",
   ];
@@ -157,6 +158,7 @@ function buildToolRichSystemPrompt(params: {
     "message",
     "memory_search",
     "memory_get",
+    "memory_expand",
     "web_search",
     "web_fetch",
   ].map((name) => ({ ...createStubTool(name), description: `${name} tool` }));

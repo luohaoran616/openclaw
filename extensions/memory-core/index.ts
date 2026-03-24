@@ -16,12 +16,16 @@ export default definePluginEntry({
           config: ctx.config,
           agentSessionKey: ctx.sessionKey,
         });
-        if (!memorySearchTool || !memoryGetTool) {
+        const memoryExpandTool = api.runtime.tools.createMemoryExpandTool({
+          config: ctx.config,
+          agentSessionKey: ctx.sessionKey,
+        });
+        if (!memorySearchTool || !memoryGetTool || !memoryExpandTool) {
           return null;
         }
-        return [memorySearchTool, memoryGetTool];
+        return [memorySearchTool, memoryGetTool, memoryExpandTool];
       },
-      { names: ["memory_search", "memory_get"] },
+      { names: ["memory_search", "memory_get", "memory_expand"] },
     );
 
     api.registerCli(

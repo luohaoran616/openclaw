@@ -10,6 +10,7 @@ import { jsonResult, readStringParam } from "./common.js";
 import {
   createSessionVisibilityGuard,
   createAgentToAgentPolicy,
+  looksLikeSessionId,
   resolveEffectiveSessionToolsVisibility,
   resolveSessionReference,
   resolveSandboxedSessionToolContext,
@@ -166,6 +167,17 @@ function enforceSessionsHistoryHardCap(params: {
   return { items: placeholder, bytes: jsonUtf8Bytes(placeholder), hardCapped: true };
 }
 
+function buildSessionsHistoryMisuseHint(sessionKey: string): string {
+  const trimmed = sessionKey.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (looksLikeSessionId(trimmed) || /\.jsonl(?:\.reset\.)?/i.test(trimmed)) {
+    return " For indexed memory notes with Source Anchors, sourcePath, or archived *.jsonl(.reset.*) provenance, use memory_expand to read note-linked sidecars, anchors, and transcript slices.";
+  }
+  return "";
+}
+
 export function createSessionsHistoryTool(opts?: {
   agentSessionKey?: string;
   sandboxed?: boolean;
@@ -174,7 +186,8 @@ export function createSessionsHistoryTool(opts?: {
   return {
     label: "Session History",
     name: "sessions_history",
-    description: "Fetch message history for a session.",
+    description:
+      "Fetch message history for a currently active session/sub-agent. For archived transcript recall from durable memory notes, memory_expand reads note-linked sidecars, anchors, and transcript slices.",
     parameters: SessionsHistoryToolSchema,
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
@@ -196,7 +209,10 @@ export function createSessionsHistoryTool(opts?: {
         restrictToSpawned,
       });
       if (!resolvedSession.ok) {
-        return jsonResult({ status: resolvedSession.status, error: resolvedSession.error });
+        return jsonResult({
+          status: resolvedSession.status,
+          error: `${resolvedSession.error}${buildSessionsHistoryMisuseHint(sessionKeyParam)}`,
+        });
       }
       const visibleSession = await resolveVisibleSessionReference({
         resolvedSession,

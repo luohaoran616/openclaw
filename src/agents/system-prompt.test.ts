@@ -182,6 +182,20 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("Voice (TTS) is enabled.");
   });
 
+  it("describes the anchor-first memory recall ladder when memory_expand is available", () => {
+    const prompt = buildAgentSystemPrompt({
+      workspaceDir: "/tmp/openclaw",
+      toolNames: ["message", "memory_search", "memory_get", "memory_expand"],
+    });
+
+    expect(prompt).toContain("run memory_search on MEMORY.md + memory/*.md; then use memory_get");
+    expect(prompt).toContain("call memory_expand next");
+    expect(prompt).toContain(
+      "Use sessions_history when you need recent history from another currently active session or sub-agent.",
+    );
+    expect(prompt).toContain("Do not read whole session transcripts by default.");
+  });
+
   it("adds reasoning tag hint when enabled", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/openclaw",
@@ -237,6 +251,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("Tool availability (filtered by policy):");
     expect(prompt).toContain("sessions_list");
     expect(prompt).toContain("sessions_history");
+    expect(prompt).toContain("currently active session/sub-agent");
     expect(prompt).toContain("sessions_send");
   });
 

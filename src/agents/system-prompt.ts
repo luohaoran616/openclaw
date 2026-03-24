@@ -43,12 +43,19 @@ function buildMemorySection(params: {
   if (params.isMinimal) {
     return [];
   }
-  if (!params.availableTools.has("memory_search") && !params.availableTools.has("memory_get")) {
+  if (
+    !params.availableTools.has("memory_search") &&
+    !params.availableTools.has("memory_get") &&
+    !params.availableTools.has("memory_expand")
+  ) {
     return [];
   }
   const lines = [
     "## Memory Recall",
-    "Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.",
+    "Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines.",
+    "If the indexed note is still too thin and it contains Source Anchors or a sidecarPath, call memory_expand next.",
+    "Use sessions_history when you need recent history from another currently active session or sub-agent.",
+    "Only if memory_expand is still insufficient should you pass sessionQuery to memory_expand for a note-scoped source-session lookup. Do not read whole session transcripts by default.",
   ];
   if (params.citationsMode === "off") {
     lines.push(
@@ -259,7 +266,7 @@ export function buildAgentSystemPrompt(params: {
       ? 'List OpenClaw agent ids allowed for sessions_spawn when runtime="subagent" (not ACP harness ids)'
       : "List OpenClaw agent ids allowed for sessions_spawn",
     sessions_list: "List other sessions (incl. sub-agents) with filters/last",
-    sessions_history: "Fetch history for another session/sub-agent",
+    sessions_history: "Fetch recent history for another currently active session/sub-agent",
     sessions_send: "Send a message to another session/sub-agent",
     sessions_spawn: acpSpawnRuntimeEnabled
       ? 'Spawn an isolated sub-agent or ACP coding session (runtime="acp" requires `agentId` unless `acp.defaultAgent` is configured; ACP harness ids follow acp.allowedAgents, not agents_list)'
@@ -441,7 +448,7 @@ export function buildAgentSystemPrompt(params: {
           "- nodes: list/describe/notify/camera/screen on paired nodes",
           "- cron: manage cron jobs and wake events (use for reminders; when scheduling a reminder, write the systemEvent text as something that will read like a reminder when it fires, and mention that it is a reminder depending on the time gap between setting and firing; include recent context in reminder text if appropriate)",
           "- sessions_list: list sessions",
-          "- sessions_history: fetch session history",
+          "- sessions_history: fetch active session/sub-agent history",
           "- sessions_send: send to another session",
           "- subagents: list/steer/kill sub-agent runs",
           '- session_status: show usage/time/model state and answer "what model are we using?"',

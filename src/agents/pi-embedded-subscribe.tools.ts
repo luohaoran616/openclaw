@@ -144,6 +144,7 @@ const TRUSTED_TOOL_RESULT_MEDIA = new Set([
   "image",
   "image_generate",
   "memory_get",
+  "memory_expand",
   "memory_search",
   "message",
   "nodes",
